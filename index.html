@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCS State Diagram Visualizer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Collapsible Toolbar -->
+        <div class="toolbar" id="toolbar">
+            <div class="toolbar-content">
+                <div class="toolbar-section">
+                    <button id="collapse-btn" class="toolbar-btn">▲</button>
+                    <select id="automaton-type" class="toolbar-select">
+                        <option value="dfa">DFA</option>
+                        <option value="nfa">NFA</option>
+                    </select>
+                </div>
+
+                <div class="toolbar-section">
+                    <input type="text" id="input-string" class="toolbar-input" placeholder="Test string..." />
+                    <button id="animate-btn" class="toolbar-btn primary">🎬 Animate</button>
+                    <button id="batch-test-btn" class="toolbar-btn">📊 Batch Test</button>
+                </div>
+
+                <div class="toolbar-section">
+                    <button id="add-state-btn" class="toolbar-btn">➕ State</button>
+                    <button id="add-transition-btn" class="toolbar-btn">↗️ Transition</button>
+                    <button id="clear-btn" class="toolbar-btn">🗑️ Clear</button>
+                </div>
+
+                <div class="toolbar-section">
+                    <select id="template-select" class="toolbar-select">
+                        <option value="">Templates...</option>
+                        <option value="endsWithAB">Ends with 'ab'</option>
+                        <option value="endsWithBinary01">Ends with '01' (binary)</option>
+                        <option value="evenZerosOnes">Even 0s & 1s</option>
+                        <option value="contains101">Contains '101'</option>
+                        <option value="binaryMod3">Binary mod 3</option>
+                        <option value="epsilonNFA">ε-transitions</option>
+                    </select>
+                </div>
+
+                <div class="toolbar-section">
+                    <select id="export-format" class="toolbar-select">
+                        <option value="png">PNG</option>
+                        <option value="svg">SVG</option>
+                        <option value="json">JSON</option>
+                    </select>
+                    <button id="export-btn" class="toolbar-btn">💾 Export</button>
+                    <button id="export-json-btn" class="toolbar-btn">📋 JSON</button>
+                </div>
+
+                <div class="toolbar-section">
+                    <button id="status-modal-btn" class="toolbar-btn modal-btn">📊 Status</button>
+                    <button id="help-modal-btn" class="toolbar-btn modal-btn">❓ Help</button>
+                    <button id="code-modal-btn" class="toolbar-btn modal-btn">⚡ Code</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Full-screen Canvas -->
+        <div class="canvas-container">
+            <canvas id="diagram-canvas"></canvas>
+        </div>
+
+        <!-- Right Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <h3 id="sidebar-title">Panel</h3>
+                <button class="sidebar-close" id="sidebar-close">&times;</button>
+            </div>
+            <div class="sidebar-content" id="sidebar-content">
+                <!-- Content will be dynamically loaded here -->
+            </div>
+        </div>
+
+        <!-- Sidebar Content Templates (hidden) -->
+        <div id="status-content" class="sidebar-template">
+            <div id="status-text">Ready to create diagrams</div>
+        </div>
+
+        <div id="help-content" class="sidebar-template">
+            <ul>
+                <li><strong>Click blank canvas</strong> to create new states</li>
+                <li><strong>S key</strong> to create state at current mouse position</li>
+                <li><strong>Double-click state</strong> to rename it inline</li>
+                <li><strong>Drag on blank canvas</strong> to select multiple elements</li>
+                <li><strong>Ctrl+click</strong> to add/remove elements from selection</li>
+                <li><strong>Ctrl+click two states</strong> to quickly create transitions</li>
+                <li><strong>Shift+click state</strong> to toggle accepting status</li>
+                <li><strong>Alt+click state</strong> to delete state</li>
+                <li><strong>Delete/Backspace</strong> to delete selected elements</li>
+                <li><strong>Ctrl+A</strong> to select all elements</li>
+                <li><strong>Ctrl+Z</strong> to undo last action</li>
+                <li><strong>Ctrl+Y or Ctrl+Shift+Z</strong> to redo action</li>
+                <li><strong>Mouse wheel</strong> to zoom in/out at cursor position</li>
+                <li><strong>+ key</strong> to zoom in</li>
+                <li><strong>- key</strong> to zoom out</li>
+                <li><strong>0 key</strong> to reset zoom to 100%</li>
+                <li><strong>F key</strong> to fit diagram to view</li>
+                <li><strong>Escape</strong> to clear selection</li>
+                <li><strong>Right-click state</strong> to access state properties menu</li>
+                <li><strong>Right-click selection</strong> to zoom to selection or bulk operations</li>
+                <li>Click transition labels to edit them inline</li>
+                <li>Drag states to reposition them (works with multiple selection)</li>
+                <li>Use the "Animate" button to visualize string processing</li>
+            </ul>
+        </div>
+
+        <div id="code-content" class="sidebar-template">
+            <p>Create diagrams from structured input:</p>
+            <textarea id="structure-input" placeholder='Example:
+{
+  "metadata": { "title": "My Custom DFA" },
+  "states": [
+    { "id": 0, "label": "q0", "x": 200, "y": 300, "isStart": true },
+    { "id": 1, "label": "q1", "x": 400, "y": 300, "isAccept": true }
+  ],
+  "transitions": [
+    { "from": 0, "to": 1, "symbols": ["a"] },
+    { "from": 1, "to": 0, "symbols": ["b"] }
+  ]
+}'></textarea>
+            <div class="sidebar-actions">
+                <button id="create-from-structure-btn">🚀 Create Diagram</button>
+                <button id="copy-current-btn">📄 Copy Current</button>
+            </div>
+            <div class="console-help">
+                <small>
+                    <strong>Console Access:</strong> Use <code>visualizer.createFromStructure(structure)</code> 
+                    or <code>visualizer.loadTemplate('templateName')</code> in browser console.
+                </small>
+            </div>
+        </div>
+
+        <div id="batch-test-content" class="sidebar-template">
+            <div class="current-dfa-info">
+                <h4>Current Diagram</h4>
+                <div id="current-dfa-alphabet">Alphabet: <span id="alphabet-display">Loading...</span></div>
+                <div id="current-dfa-description">Description: <span id="description-display">Loading...</span></div>
+            </div>
+            <p>Test multiple strings at once. Enter one string per line:</p>
+            <textarea id="batch-input" placeholder='Enter test strings, one per line:
+aab
+ab
+ba
+a
+b
+abb
+bab'></textarea>
+            <div class="sidebar-actions">
+                <button id="run-batch-test-btn">🚀 Run Batch Test</button>
+                <button id="clear-batch-btn">🗑️ Clear</button>
+            </div>
+            <div class="batch-help">
+                <small>
+                    <strong>Tip:</strong> Make sure your test strings use the same alphabet as the current diagram. 
+                    Use the Templates dropdown to load different examples, or create your own diagram.
+                </small>
+            </div>
+            <div id="batch-results" class="batch-results">
+                <!-- Results will appear here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="stateVisualizer.js?v=22"></script>
+    <script src="app.js?v=22"></script>
+</body>
+</html> 
